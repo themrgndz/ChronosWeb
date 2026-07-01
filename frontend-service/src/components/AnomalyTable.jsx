@@ -1,26 +1,27 @@
 import React, { useEffect, useRef } from 'react';
 
 function AnomalyTable({ anomalies, liveLogs, onLogSelect, selectedTimestamp }) {
-  const liveEndRef = useRef(null);
+  // scrollIntoView yerine kutunun kendisini yakalamak için ref tanımlıyoruz brom
+  const liveConsoleRef = useRef(null);
 
-  // Sadece sağdaki canlı akış kutusunu kendi içinde aşağı kaydırır, sayfayı zıplatmaz brom!
+  // === SAYFAYI ZIPLATMAYAN AKILLI SCROLL MOTORU ===
   useEffect(() => {
-    if (liveEndRef.current) {
-      liveEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (liveConsoleRef.current) {
+      // Kutunun içindeki scroll'u direkt en alt yüksekliğe eşitliyoruz. Sayfa asla oynamaz!
+      liveConsoleRef.current.scrollTop = liveConsoleRef.current.scrollHeight;
     }
   }, [liveLogs]);
 
-  // Log satırını renklendiren yardımcı fonksiyonumuz
   const renderLogLine = (log, isAnomalyOnly) => {
     const isSelected = selectedTimestamp === log.timestamp;
     let logColor = '#9ca3af'; 
     let statusWeight = 'normal';
 
     if (log.type === 'AŞIRI YOĞUN') {
-      logColor = '#ef4444'; // Parlak Kırmızı
+      logColor = '#ef4444'; 
       statusWeight = 'bold';
     } else if (log.type === 'AŞIRI TENHA') {
-      logColor = '#3b82f6'; // Parlak Mavi
+      logColor = '#3b82f6'; 
       statusWeight = 'bold';
     }
 
@@ -87,9 +88,12 @@ function AnomalyTable({ anomalies, liveLogs, onLogSelect, selectedTimestamp }) {
         <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           ⚡ Canlı Sunucu Akış Hattı (Maks. 40 Satır)
         </div>
-        <div style={{ backgroundColor: '#05070f', border: '1px solid #1f2937', borderRadius: '8px', padding: '10px', height: '260px', overflowY: 'auto' }}>
+        {/* ref={liveConsoleRef} atamasını buraya çaktık brom */}
+        <div 
+          ref={liveConsoleRef}
+          style={{ backgroundColor: '#05070f', border: '1px solid #1f2937', borderRadius: '8px', padding: '10px', height: '260px', overflowY: 'auto' }}
+        >
           {liveLogs.map(log => renderLogLine(log, false))}
-          <div ref={liveEndRef} />
         </div>
       </div>
 
