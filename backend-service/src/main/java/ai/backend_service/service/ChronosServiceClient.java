@@ -14,7 +14,6 @@ public class ChronosServiceClient {
     private final WebClient webClient;
 
     public ChronosServiceClient(WebClient.Builder webClientBuilder) {
-        // Python FastAPI servisinin adresi
         this.webClient = webClientBuilder.baseUrl("http://localhost:8000").build();
     }
 

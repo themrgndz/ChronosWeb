@@ -30,14 +30,9 @@ public class DashboardWebSocketHandler extends TextWebSocketHandler {
         System.out.println("[WebSocket] Tarayıcı sekmesi ayrıldı: " + session.getId());
     }
 
-    /**
-     * Simülatör motorumuz (TrafficSimulationEngine) her yeni tahminde bu metodu çağıracak
-     * ve veriyi bağlı olan tüm React arayüzlerine anlık olarak "push" edecek agam.
-     */
     public void broadcast(DashboardPayload payload) {
         String jsonPayload;
         try {
-            // DashboardPayload nesnesini React'in anlayacağı JSON stringine çeviriyoruz
             jsonPayload = objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
             System.err.println("[WebSocket] JSON dönüştürme hatası: " + e.getMessage());
@@ -50,7 +45,7 @@ public class DashboardWebSocketHandler extends TextWebSocketHandler {
                 try {
                     session.sendMessage(message);
                 } catch (IOException e) {
-                    System.err.println("[WebSocket] Mesaj gönderim hatası (Sekme ID: " + session.getId() + "): " + e.getMessage());
+                    System.err.println("[WebSocket] Mesaj gönderim hatası: " + e.getMessage());
                 }
             }
         }

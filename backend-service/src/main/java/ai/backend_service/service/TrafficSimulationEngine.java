@@ -39,7 +39,7 @@ public class TrafficSimulationEngine {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(
                 new ClassPathResource("traffic.csv").getInputStream()))) {
 
-            br.readLine(); // CSV başlığını atla
+            br.readLine();
             String line;
             while ((line = br.readLine()) != null) {
                 String[] tokens = line.split(",");
@@ -49,7 +49,7 @@ public class TrafficSimulationEngine {
             }
             System.out.println("[SIMÜLATÖR] Veri seti yüklendi. Toplam Junction 1 satırı: " + csvRows.size());
         } catch (Exception e) {
-            System.err.println("[SIMÜLATÖR] CSV yükleme hatası! Lütfen src/main/resources altına traffic.csv dosyasını ekleyin: " + e.getMessage());
+            System.err.println("[SIMÜLATÖR] CSV yükleme hatası! traffic.csv dosyasını kontrol edin: " + e.getMessage());
         }
     }
 
@@ -63,13 +63,16 @@ public class TrafficSimulationEngine {
         String dateTimeStr = row[0].trim();
         double actualValue = Double.parseDouble(row[2].trim());
 
-        long timestamp;
+        long calculatedTimestamp;
         try {
             LocalDateTime localDateTime = LocalDateTime.parse(dateTimeStr, formatter);
-            timestamp = localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
+            calculatedTimestamp = localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
         } catch (Exception e) {
-            timestamp = System.currentTimeMillis();
+            calculatedTimestamp = System.currentTimeMillis();
         }
+
+        // LAMBDA HATASINI ENGELLEYEN CRITICAL DOKUNUŞ:
+        final long finalTimestamp = calculatedTimestamp;
 
         slidingWindow.addLast(actualValue);
         if (slidingWindow.size() > 100) {
@@ -78,14 +81,13 @@ public class TrafficSimulationEngine {
 
         currentRowIndex++;
 
-        // En az 20 veri birikmeden modele istek yollanmaz brom
         if (slidingWindow.size() < 20) {
             System.out.println("[SIMÜLATÖR] Veri biriktiriliyor... (" + slidingWindow.size() + "/20)");
             return;
         }
 
         aiClient.getNextStepPrediction(new ArrayList<>(slidingWindow))
-                .subscribe(aiResponse -> processAndBroadcast(timestamp, dateTimeStr, actualValue, aiResponse));
+                .subscribe(aiResponse -> processAndBroadcast(finalTimestamp, dateTimeStr, actualValue, aiResponse));
     }
 
     private void processAndBroadcast(long timestamp, String dateTimeStr, double actualValue, ChronosResponse aiResponse) {

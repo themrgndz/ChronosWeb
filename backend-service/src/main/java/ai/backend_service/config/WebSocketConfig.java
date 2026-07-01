@@ -12,15 +12,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final DashboardWebSocketHandler webSocketHandler;
 
-    // Spring, iç paketteki handler bileşenini bulup buraya inject edecek hacı
     public WebSocketConfig(DashboardWebSocketHandler webSocketHandler) {
         this.webSocketHandler = webSocketHandler;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // React frontend'in bağlanacağı canlı veri akış kanalı
         registry.addHandler(webSocketHandler, "/stream")
-                .setAllowedOrigins("*"); // CORS blokajını aşmak için
+                .setAllowedOrigins("*");
     }
 }
