@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardChart from './components/DashboardChart';
 import AnomalyTable from './components/AnomalyTable';
-import { Activity, AlertTriangle, ShieldCheck, Terminal } from 'lucide-react';
+import { Activity, AlertTriangle, ShieldCheck, Terminal, Play, Pause } from 'lucide-react'; // Play ve Pause ikonları eklendi
 
 function App() {
   const [dataPool, setDataPool] = useState([]);
-  const [anomalies, setAnomalies] = useState([]); // Sol panel için saf anomaliler
-  const [liveLogs, setLiveLogs] = useState([]);   // Sağ panel için akan tüm loglar
+  const [anomalies, setAnomalies] = useState([]); 
+  const [liveLogs, setLiveLogs] = useState([]);   
   const [selectedTimestamp, setSelectedTimestamp] = useState(null);
+  const [isSimulating, setIsSimulating] = useState(false); // Simülasyon durumu state'i
   
   const [visibleLines, setVisibleLines] = useState({
     actual: true,
@@ -17,6 +18,14 @@ function App() {
   });
 
   const firstPredictionsRef = useRef(new Map());
+
+  // İlk açılışta backend'deki simülasyon durumunu kontrol et brom
+  useEffect(() => {
+    fetch('http://localhost:8080/api/simulation/status')
+      .then(res => res.json())
+      .then(data => setIsSimulating(data.isRunning))
+      .catch(err => console.error("[API] Durum alınamadı brom:", err));
+  }, []);
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8080/stream');
@@ -43,7 +52,6 @@ function App() {
         type: currentLogType
       };
 
-      // 1. Grafik Veri Havuzu (Düzeltildi - Canavar gibi akacak brom)
       setDataPool(prev => {
         if (prev.some(item => item.timestamp === timestamp)) return prev;
         const newPoint = {
@@ -54,18 +62,16 @@ function App() {
           upper: upperBound,
           lower: lowerBound
         };
-        return [...prev, newPoint].slice(-60); // Hata çözüldü, yeni veri eklenip kırpılıyor!
+        return [...prev, newPoint].slice(-60);
       });
 
-      // 2. SOL PANEL GÜNCELLEME: Sadece anomaliler sabit kalır
       if (isCurrentAnomaly) {
         setAnomalies(prev => {
           if (prev.some(item => item.timestamp === timestamp)) return prev;
-          return [...prev, newLogItem]; // Zaman sırasına göre aşağı doğru birikir agam
+          return [...prev, newLogItem];
         });
       }
 
-      // 3. SAĞ PANEL GÜNCELLEME: Canlı sunucu akışı (Maks 40 satır)
       setLiveLogs(prev => {
         if (prev.some(item => item.timestamp === timestamp)) return prev;
         return [...prev, newLogItem].slice(-40);
@@ -76,6 +82,21 @@ function App() {
     return () => ws.close();
   }, []);
 
+  // Akışı başlatma ve durdurma tetikleyicisi
+  const toggleSimulation = async () => {
+    const endpoint = isSimulating ? 'stop' : 'start';
+    try {
+      const response = await fetch(`http://localhost:8080/api/simulation/${endpoint}`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        setIsSimulating(!isSimulating);
+      }
+    } catch (error) {
+      console.error("Simülasyon durumu değiştirilemedi agam:", error);
+    }
+  };
+
   const latestData = dataPool[dataPool.length - 1] || {};
   const isLatestAnomalous = anomalies.some(a => a.timeStr === latestData.timeStr);
   const latestAnomalyType = isLatestAnomalous ? anomalies.find(a => a.timeStr === latestData.timeStr)?.type : 'TEMİZ';
@@ -83,10 +104,36 @@ function App() {
   return (
     <div style={{ width: '100%', padding: '24px', minHeight: '100vh', backgroundColor: '#0b0f19' }}>
       
-      <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 24px 0', color: '#ffffff', fontSize: '26px', letterSpacing: '0.5px' }}>
-        <Activity color="#10b981" size={32} style={{ filter: 'drop-shadow(0 0 8px #10b981)' }} /> 
-        Canlı Trafik Analiz & Forecasting Paneli
-      </h2>
+      {/* Üst Başlık ve Kontrol Butonu Alanı */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0, color: '#ffffff', fontSize: '26px', letterSpacing: '0.5px' }}>
+          <Activity color="#10b981" size={32} style={{ filter: 'drop-shadow(0 0 8px #10b981)' }} /> 
+          Canlı Trafik Analiz & Forecasting Paneli
+        </h2>
+
+        {/* Canlı Akış Başlat/Durdur Butonu */}
+        <button 
+          onClick={toggleSimulation}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: isSimulating ? '#ef4444' : '#10b981',
+            color: '#fff',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            boxShadow: isSimulating ? '0 0 12px rgba(239, 68, 68, 0.4)' : '0 0 12px rgba(16, 185, 129, 0.4)',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {isSimulating ? <Pause size={18} /> : <Play size={18} />}
+          {isSimulating ? 'Akışı Durdur' : 'Akışı Başlat'}
+        </button>
+      </div>
 
       {/* Kartlar */}
       <div style={{ display: 'flex', gap: '20px', marginBottom: '24px' }}>

@@ -27,6 +27,9 @@ public class TrafficSimulationEngine {
     private final List<String[]> csvRows = new ArrayList<>();
     private int currentRowIndex = 0;
 
+    // Simülasyon durumunu kontrol eden thread-safe bayrak
+    private volatile boolean isRunning = false;
+
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public TrafficSimulationEngine(ChronosServiceClient aiClient, DashboardWebSocketHandler webSocketHandler) {
@@ -55,6 +58,11 @@ public class TrafficSimulationEngine {
 
     @Scheduled(fixedRate = 1000)
     public void runSimulationStep() {
+        // Eğer akış başlatılmadıysa veya durdurulduysa işlem yapma brom
+        if (!isRunning) {
+            return;
+        }
+
         if (csvRows.isEmpty() || currentRowIndex >= csvRows.size()) {
             return;
         }
@@ -71,7 +79,6 @@ public class TrafficSimulationEngine {
             calculatedTimestamp = System.currentTimeMillis();
         }
 
-        // LAMBDA HATASINI ENGELLEYEN CRITICAL DOKUNUŞ:
         final long finalTimestamp = calculatedTimestamp;
 
         slidingWindow.addLast(actualValue);
@@ -123,5 +130,20 @@ public class TrafficSimulationEngine {
 
         System.out.printf("[%s] Trafik: %.0f | Beklenen: %.0f | Durum: %s%n",
                 dateTimeStr, actualValue, predictedMedian, anomalyType);
+    }
+
+    // Durum kontrolü ve başlatma/durdurma metotları agam
+    public boolean isRunning() {
+        return this.isRunning;
+    }
+
+    public void startSimulation() {
+        this.isRunning = true;
+        System.out.println("[SIMÜLATÖR] Canlı akış başlatıldı brom.");
+    }
+
+    public void stopSimulation() {
+        this.isRunning = false;
+        System.out.println("[SIMÜLATÖR] Canlı akış durduruldu agam.");
     }
 }
