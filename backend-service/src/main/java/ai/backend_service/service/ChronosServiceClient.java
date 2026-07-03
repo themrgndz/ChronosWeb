@@ -2,6 +2,7 @@ package ai.backend_service.service;
 
 import ai.backend_service.model.ChronosRequest;
 import ai.backend_service.model.ChronosResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -13,8 +14,10 @@ public class ChronosServiceClient {
 
     private final WebClient webClient;
 
-    public ChronosServiceClient(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://localhost:8000").build();
+    // properties dosyasından Docker URL'ini dinamik alıyoruz brom
+    public ChronosServiceClient(WebClient.Builder webClientBuilder, @Value("${ai.service.url}") String aiServiceUrl) {
+        this.webClient = webClientBuilder.baseUrl(aiServiceUrl).build();
+        System.out.println("[AI-CLIENT] Baglanti adresi kuruldu: " + aiServiceUrl);
     }
 
     public Mono<ChronosResponse> getNextStepPrediction(List<Double> contextWindow) {
@@ -24,7 +27,7 @@ public class ChronosServiceClient {
                 .retrieve()
                 .bodyToMono(ChronosResponse.class)
                 .onErrorResume(e -> {
-                    System.err.println("[AI-CLIENT] FastAPI bağlantı hatası: " + e.getMessage());
+                    System.err.println("[AI-CLIENT] FastAPI baglanti hatasi: " + e.getMessage());
                     return Mono.empty();
                 });
     }

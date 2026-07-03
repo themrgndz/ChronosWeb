@@ -1,13 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 
 function AnomalyTable({ anomalies, liveLogs, onLogSelect, selectedTimestamp }) {
-  // scrollIntoView yerine kutunun kendisini yakalamak için ref tanımlıyoruz brom
   const liveConsoleRef = useRef(null);
 
-  // === SAYFAYI ZIPLATMAYAN AKILLI SCROLL MOTORU ===
   useEffect(() => {
     if (liveConsoleRef.current) {
-      // Kutunun içindeki scroll'u direkt en alt yüksekliğe eşitliyoruz. Sayfa asla oynamaz!
       liveConsoleRef.current.scrollTop = liveConsoleRef.current.scrollHeight;
     }
   }, [liveLogs]);

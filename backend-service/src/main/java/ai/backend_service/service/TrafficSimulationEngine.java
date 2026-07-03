@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -26,8 +27,6 @@ public class TrafficSimulationEngine {
     private final LinkedList<Double> slidingWindow = new LinkedList<>();
     private final List<String[]> csvRows = new ArrayList<>();
     private int currentRowIndex = 0;
-
-    // Simülasyon durumunu kontrol eden thread-safe bayrak
     private volatile boolean isRunning = false;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -52,20 +51,14 @@ public class TrafficSimulationEngine {
             }
             System.out.println("[SIMÜLATÖR] Veri seti yüklendi. Toplam Junction 1 satırı: " + csvRows.size());
         } catch (Exception e) {
-            System.err.println("[SIMÜLATÖR] CSV yükleme hatası! traffic.csv dosyasını kontrol edin: " + e.getMessage());
+            System.err.println("[SIMÜLATÖR] CSV yükleme hatası!: " + e.getMessage());
         }
     }
 
     @Scheduled(fixedRate = 1000)
     public void runSimulationStep() {
-        // Eğer akış başlatılmadıysa veya durdurulduysa işlem yapma brom
-        if (!isRunning) {
-            return;
-        }
-
-        if (csvRows.isEmpty() || currentRowIndex >= csvRows.size()) {
-            return;
-        }
+        if (!isRunning) return;
+        if (csvRows.isEmpty() || currentRowIndex >= csvRows.size()) return;
 
         String[] row = csvRows.get(currentRowIndex);
         String dateTimeStr = row[0].trim();
@@ -93,16 +86,33 @@ public class TrafficSimulationEngine {
             return;
         }
 
-        aiClient.getNextStepPrediction(new ArrayList<>(slidingWindow))
-                .subscribe(aiResponse -> processAndBroadcast(finalTimestamp, dateTimeStr, actualValue, aiResponse));
+        List<Double> currentWindow = new ArrayList<>(slidingWindow);
+
+        // 1. ADIM TAHMİNİ (t+1)
+        aiClient.getNextStepPrediction(currentWindow)
+                .flatMap(firstResponse -> {
+                    double tPlus1Prediction = firstResponse.getMedian();
+
+                    // İlk tahmini pencereye simüle edip ekliyoruz brom
+                    List<Double> extendedWindow = new ArrayList<>(currentWindow);
+                    extendedWindow.add(tPlus1Prediction);
+                    if (extendedWindow.size() > 100) extendedWindow.remove(0);
+
+                    // 2. ADIM TAHMİNİ (t+2)
+                    return aiClient.getNextStepPrediction(extendedWindow)
+                            .map(secondResponse -> {
+                                List<Double> doublePredictions = List.of(tPlus1Prediction, secondResponse.getMedian());
+                                return new PredictionTuple(firstResponse, doublePredictions);
+                            });
+                })
+                .subscribe(tuple -> processAndBroadcast(finalTimestamp, dateTimeStr, actualValue, tuple.firstResponse, tuple.predictions));
     }
 
-    private void processAndBroadcast(long timestamp, String dateTimeStr, double actualValue, ChronosResponse aiResponse) {
-        if (aiResponse == null) return;
+    private void processAndBroadcast(long timestamp, String dateTimeStr, double actualValue, ChronosResponse firstResponse, List<Double> predictions) {
+        if (firstResponse == null) return;
 
-        double predictedMedian = aiResponse.getMedian();
-        double upperBound = aiResponse.getUpper_bound();
-        double lowerBound = aiResponse.getLower_bound();
+        double upperBound = firstResponse.getUpper_bound();
+        double lowerBound = firstResponse.getLower_bound();
 
         boolean isAnomaly = false;
         String anomalyType = "NORMAL";
@@ -119,7 +129,7 @@ public class TrafficSimulationEngine {
                 .timestamp(timestamp)
                 .dateTimeStr(dateTimeStr)
                 .actualValue(actualValue)
-                .predictedMedian(predictedMedian)
+                .predictions(predictions) // İki adımlı tahmin listesi gidiyor agam
                 .upperBound(upperBound)
                 .lowerBound(lowerBound)
                 .isAnomaly(isAnomaly)
@@ -128,22 +138,22 @@ public class TrafficSimulationEngine {
 
         webSocketHandler.broadcast(payload);
 
-        System.out.printf("[%s] Trafik: %.0f | Beklenen: %.0f | Durum: %s%n",
-                dateTimeStr, actualValue, predictedMedian, anomalyType);
+        System.out.printf("[%s] Trafik: %.0f | (t+1) Beklenen: %.0f | (t+2) Beklenen: %.0f | Durum: %s%n",
+                dateTimeStr, actualValue, predictions.get(0), predictions.get(1), anomalyType);
     }
 
-    // Durum kontrolü ve başlatma/durdurma metotları agam
-    public boolean isRunning() {
-        return this.isRunning;
-    }
+    public boolean isRunning() { return this.isRunning; }
+    public void startSimulation() { this.isRunning = true; System.out.println("[SIMÜLATÖR] Canlı akış başlatıldı brom."); }
+    public void stopSimulation() { this.isRunning = false; System.out.println("[SIMÜLATÖR] Canlı akış durduruldu agam."); }
 
-    public void startSimulation() {
-        this.isRunning = true;
-        System.out.println("[SIMÜLATÖR] Canlı akış başlatıldı brom.");
-    }
+    // Reaktif akışta verileri sarmalamak için yardımcı iç sınıf brom
+    private static class PredictionTuple {
+        final ChronosResponse firstResponse;
+        final List<Double> predictions;
 
-    public void stopSimulation() {
-        this.isRunning = false;
-        System.out.println("[SIMÜLATÖR] Canlı akış durduruldu agam.");
+        PredictionTuple(ChronosResponse firstResponse, List<Double> predictions) {
+            this.firstResponse = firstResponse;
+            this.predictions = predictions;
+        }
     }
 }
