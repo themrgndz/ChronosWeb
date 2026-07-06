@@ -34,6 +34,8 @@ Platform, birbirleriyle asenkron ve yüksek performanslı iletişim kuran 3 ana 
 
 ---
 
+<img width="1919" height="1079" alt="06 07 2026" src="https://github.com/user-attachments/assets/9c8f4c58-57a4-4b95-bed0-cf0ecbc0993e" />
+
 ## 📂 Proje Yapısı
 
 ```plaintext
@@ -50,5 +52,3 @@ Platform, birbirleriyle asenkron ve yüksek performanslı iletişim kuran 3 ana 
 │   ├── src/components/       # AnomalyTable ve DashboardChart bileşenleri
 │   └── Dockerfile
 └── docker-compose.yml        # Tek komutla tüm mimariyi ayağa kaldıran orkestrasyon dosyası
-
-<img width="1919" height="1079" alt="06 07 2026" src="https://github.com/user-attachments/assets/9c8f4c58-57a4-4b95-bed0-cf0ecbc0993e" />
