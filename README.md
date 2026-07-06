@@ -35,6 +35,7 @@ Platform, birbirleriyle asenkron ve yüksek performanslı iletişim kuran 3 ana 
 ---
 
 <img width="1919" height="1079" alt="06 07 2026" src="https://github.com/user-attachments/assets/9c8f4c58-57a4-4b95-bed0-cf0ecbc0993e" />
+<img width="1919" height="1079" alt="06 07 2026 2" src="https://github.com/user-attachments/assets/00219cfb-6d4d-4aaf-b70b-d38674f19d9e" />
 
 ## 📂 Proje Yapısı
 
