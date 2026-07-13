@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { ShieldAlert, ActivitySquare } from 'lucide-react';
 
 function AnomalyTable({ anomalies, liveLogs, onLogSelect, selectedTimestamp }) {
   const liveConsoleRef = useRef(null);
@@ -11,50 +12,62 @@ function AnomalyTable({ anomalies, liveLogs, onLogSelect, selectedTimestamp }) {
 
   const renderLogLine = (log, isAnomalyOnly) => {
     const isSelected = selectedTimestamp === log.timestamp;
-    let logColor = '#9ca3af'; 
-    let statusWeight = 'normal';
+    
+    let baseColor = 'text-gray-500 dark:text-gray-400';
+    let highlightColor = 'text-gray-800 dark:text-gray-200';
+    let badgeStyle = 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
 
     if (log.type === 'AŞIRI YOĞUN') {
-      logColor = '#ef4444'; 
-      statusWeight = 'bold';
+      baseColor = 'text-red-500 dark:text-red-400';
+      highlightColor = 'text-red-600 dark:text-red-300';
+      badgeStyle = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
     } else if (log.type === 'AŞIRI TENHA') {
-      logColor = '#3b82f6'; 
-      statusWeight = 'bold';
+      baseColor = 'text-blue-500 dark:text-blue-400';
+      highlightColor = 'text-blue-600 dark:text-blue-300';
+      badgeStyle = 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
     }
 
     return (
       <div 
         key={`${log.timestamp}-${log.type}-${isAnomalyOnly ? 'anomaly' : 'live'}`}
-        style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '6px 8px',
-          borderBottom: '1px solid #111827',
-          backgroundColor: isSelected ? '#1e293b' : 'transparent',
-          borderRadius: '4px',
-          color: logColor,
-          fontSize: '12.5px'
-        }}
+        className={`
+          flex items-center justify-between p-3 rounded-lg border border-transparent
+          transition-all duration-200 group
+          ${isSelected ? 'bg-gray-100 dark:bg-gray-800/80 border-gray-300 dark:border-gray-700 shadow-inner' : 'hover:bg-gray-50 dark:hover:bg-white/5'}
+        `}
       >
-        <div style={{ flex: 1, whiteSpace: 'pre-wrap', fontFamily: '"Fira Code", monospace' }}>
-          <span style={{ color: '#4b5563' }}>[{log.timeStr}]</span>
-          {` Trf: `}<span style={{ fontWeight: 'bold' }}>{String(log.value).padEnd(2)}</span>
-          {` | Bkl: `}<span style={{ color: '#10b981' }}>{String(Math.round(log.prediction)).padEnd(2)}</span>
-          {` | `}<span style={{ color: logColor, fontWeight: statusWeight }}>{log.type}</span>
+        <div className={`flex-1 font-mono text-sm ${baseColor} flex items-center gap-3`}>
+          <span className="text-gray-400 dark:text-gray-500 w-32 shrink-0">[{log.timeStr}]</span>
+          
+          <div className="flex items-center gap-4 flex-1">
+             <span className="flex items-center gap-1">
+               <span className="text-gray-400 dark:text-gray-500 text-xs uppercase">Trf</span>
+               <span className={`font-bold ${highlightColor}`}>{String(log.value).padEnd(2)}</span>
+             </span>
+             
+             <span className="flex items-center gap-1">
+               <span className="text-gray-400 dark:text-gray-500 text-xs uppercase">Bkl</span>
+               <span className="text-emerald-500 font-medium">{String(Math.round(log.prediction)).padEnd(2)}</span>
+             </span>
+
+             <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${badgeStyle}`}>
+               {log.type}
+             </span>
+          </div>
         </div>
 
         {log.type !== 'NORMAL' && (
           <button
             onClick={() => onLogSelect(isSelected ? null : log.timestamp)}
-            style={{
-              padding: '1px 6px',
-              backgroundColor: isSelected ? '#4b5563' : '#f59e0b',
-              color: isSelected ? '#fff' : '#111827',
-              border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold'
-            }}
+            className={`
+              px-3 py-1 rounded-md text-xs font-bold transition-all
+              ${isSelected 
+                ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600' 
+                : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 hover:bg-yellow-200 dark:hover:bg-yellow-500 hover:text-yellow-900 dark:hover:text-gray-900 border border-yellow-200 dark:border-yellow-500/30'
+              }
+            `}
           >
-            {isSelected ? 'Kaldır' : 'Parlat 🚀'}
+            {isSelected ? 'Kaldır' : 'İncele'}
           </button>
         )}
       </div>
@@ -62,35 +75,40 @@ function AnomalyTable({ anomalies, liveLogs, onLogSelect, selectedTimestamp }) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '20px', width: '100%' }}>
+    <div className="flex flex-col lg:flex-row gap-6 w-full">
       
-      {/* 📌 SOL PANEL: SABİT KALAN ANOMALİLER */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontSize: '12px', color: '#f87171', fontWeight: 'bold', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          📌 Sabitlenmiş Güvenlik Olayları ({anomalies.length})
+      {/* SOL PANEL */}
+      <div className="flex-1 flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-red-500 dark:text-red-400 font-bold text-sm uppercase tracking-wide">
+          <ShieldAlert className="w-4 h-4" /> Sabitlenmiş İhlaller ({anomalies.length})
         </div>
-        <div style={{ backgroundColor: '#05070f', border: '1px solid #374151', borderRadius: '8px', padding: '10px', height: '260px', overflowY: 'auto' }}>
+        <div className="bg-white dark:bg-[#05070f] border border-gray-200 dark:border-gray-800 rounded-xl p-2 h-[320px] overflow-y-auto shadow-inner custom-scrollbar transition-colors duration-500">
           {anomalies.length === 0 ? (
-            <div style={{ padding: '20px', color: '#4b5563', textAlign: 'center', fontFamily: 'monospace', fontSize: '13px' }}>
-              Henüz anomali olayı yakalanmadı agam.
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-600 font-mono text-sm">
+               <ShieldAlert className="w-8 h-8 mb-2 opacity-50" />
+               Henüz anomali olayı yakalanmadı.
             </div>
           ) : (
-            anomalies.map(log => renderLogLine(log, true))
+            <div className="flex flex-col gap-1">
+              {anomalies.map(log => renderLogLine(log, true))}
+            </div>
           )}
         </div>
       </div>
 
-      {/* ⚡ SAĞ PANEL: CANLI AKAN TÜM SUNUCU LOGLARI */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          ⚡ Canlı Sunucu Akış Hattı (Maks. 40 Satır)
+      {/* SAĞ PANEL */}
+      <div className="flex-1 flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 font-bold text-sm uppercase tracking-wide">
+          <ActivitySquare className="w-4 h-4" /> Canlı Sunucu Akışı (Maks 40)
         </div>
-        {/* ref={liveConsoleRef} atamasını buraya çaktık brom */}
         <div 
           ref={liveConsoleRef}
-          style={{ backgroundColor: '#05070f', border: '1px solid #1f2937', borderRadius: '8px', padding: '10px', height: '260px', overflowY: 'auto' }}
+          className="bg-white dark:bg-[#05070f] border border-gray-200 dark:border-gray-800 rounded-xl p-2 h-[320px] overflow-y-auto shadow-inner custom-scrollbar relative transition-colors duration-500"
         >
-          {liveLogs.map(log => renderLogLine(log, false))}
+          <div className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-white dark:from-[#05070f] to-transparent pointer-events-none z-10"></div>
+          <div className="flex flex-col gap-1 pt-2">
+            {liveLogs.map(log => renderLogLine(log, false))}
+          </div>
         </div>
       </div>
 
