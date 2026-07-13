@@ -1,68 +1,55 @@
-ChronosWeb: AI-Driven Live Traffic Forecasting & Anomaly Detection Dashboard
+# 📊 ChronosWeb: AI-Driven Live Traffic Forecasting & Anomaly Detection Dashboard
 
-ChronosWeb, zaman serisi verileri için geliştirilmiş çağdaş bir in-context learning modeli olan Amazon Chronos (T5-Mini) mimarisini kullanan; mikroservis tabanlı, uçtan uca canlı bir trafik tahminleme ve anomali tespit platformudur.
+ChronosWeb; zaman serisi verileri için geliştirilmiş çağdaş bir *in-context learning* modeli olan **Amazon Chronos (T5-Mini)** mimarisini kullanan, mikroservis tabanlı ve uçtan uca canlı bir trafik tahminleme ile anomali tespit platformudur.
 
-Proje, gerçek zamanlı simüle edilen trafik akışlarını kayan pencere (sliding window) mekanizmasıyla analiz ederek gelecekteki trafik yoğunluğunu tahmin eder ve istatistiksel güven sınırları vasıtasıyla anlık anomalileri (Aşırı Yoğun / Aşırı Tenha) yakalar.
+Proje, gerçek zamanlı simüle edilen trafik akışlarını **kayan pencere (sliding window)** mekanizmasıyla analiz ederek gelecekteki trafik yoğunluğunu tahmin eder ve istatistiksel güven sınırları vasıtasıyla anlık anomalileri (Aşırı Yoğun / Aşırı Tenha) yakalar.
 
-🚀 Mimari ve Veri Akışı
-AI Service (FastAPI & PyTorch): Amazon'un chronos-t5-mini modelini hafızaya yükler (GPU/CUDA destekli). Spring Boot'tan gelen geçmiş zaman serisi pencerelerini (context) işleyerek önümüzdeki 1 adım sonrasının medyan tahminini ve %5 - %95 güven aralıklarını hesaplar.
+---
 
-Backend Service (Spring Boot WebFlux & WebSockets): traffic.csv dosyasından verileri okuyarak gerçek zamanlı bir trafik akışı simüle eder. Verileri 100'lük kayan pencerelerde biriktirir ve asenkron (WebFlux/Reactive) olarak AI servisine tahmin istekleri gönderir. Gelen sonuçları anomali filtresinden geçirerek WebSocket üzerinden istemcilere yayınlar.
+## 🚀 Mimari ve Veri Akışı
 
-Frontend Service (React & Vite): WebSocket hattından beslenen canlı SOC (Security Operations Center) konsoludur. Recharts tabanlı grafiklerle anlık trafik akışını, tahmin projeksiyonlarını ve güven koridorlarını (üst/alt sınır) görselleştirir.
+Platform, birbirleriyle asenkron ve yüksek performanslı iletişim kuran 3 ana mikroservisten oluşmaktadır:
 
-🛠️ Kullanılan Teknolojiler
-AI & Forecasting: Python, FastAPI, PyTorch, Amazon Chronos Pipeline (chronos-t5-mini), NumPy
+1. **AI Service (FastAPI & PyTorch):** Amazon'un `chronos-t5-mini` modelini hafızaya yükler (GPU/CUDA destekli). Backend servisinden gelen geçmiş zaman serisi pencerelerini (context) işleyerek önümüzdeki 1 adım sonrasının medyan tahminini ve %5 - %95 güven aralıklarını hesaplar.
+2. **Backend Service (Spring Boot WebFlux & WebSockets):** `traffic.csv` dosyasından verileri okuyarak gerçek zamanlı bir trafik akışı simüle eder. Verileri 100'lük kayan pencerelerde biriktirir ve asenkron (WebFlux/Reactive `WebClient`) olarak AI servisine tahmin istekleri gönderir. Gelen sonuçları anomali filtresinden geçirerek WebSocket üzerinden istemcilere yayınlar.
+3. **Frontend Service (React & Vite):** WebSocket hattından beslenen canlı SOC (Security Operations Center) konsoludur. Recharts tabanlı dinamik grafiklerle anlık trafik akışını, tahmin projeksiyonlarını ve güven koridorlarını (üst/alt sınır) görselleştirir.
 
-Backend: Java 17, Spring Boot, Spring WebFlux (Reactive Web Client), WebSockets, Lombok
+---
 
-Frontend: React, Vite, Lucide React, Recharts / Tailwind tabanlı modern Dashboard UI
+## 🛠️ Kullanılan Teknolojiler
 
-📂 Proje Yapısı
-Plaintext
+* **AI & Forecasting:** Python, FastAPI, PyTorch, Amazon Chronos Pipeline (`chronos-t5-mini`), NumPy
+* **Backend:** Java 17, Spring Boot, Spring WebFlux (Reactive Web Client), WebSockets, Lombok
+* **Frontend:** React, Vite, Lucide React, Recharts, Tailwind CSS
+* **Konteynerizasyon:** Docker, Docker Compose
 
-├── ai-service/               
-│   ├── app/main.py           
+---
+
+## 📊 Öne Çıkan Özellikler
+
+* **Zero-Shot / In-Context Forecasting:** Model, geçmişe dönük trafik patternlerini önceden bir eğitim veya fine-tuning sürecine tabi tutulmaksızın anlık öğrenir ve geleceğe yönelik projeksiyon çıkarır.
+* **Dinamik Güven Sınırları & Anomali Tespiti:** Gelen gerçek değer, modelin belirlediği %95 Üst Sınır değerini aşarsa `AŞIRI YOĞUN`, %5 Alt Sınır değerinin altına düşerse `AŞIRI TENHA` anomali etiketini alır ve SOC konsoluna anlık düşer.
+* **Çift Kanallı Canlı İzleme Konsolu:** Arayüz üzerinde sadece anomalileri yakalayan sol panel ile sunucudan akan tüm simülasyon adımlarını gösteren sağ log akışı (Maks 40 satır) eşzamanlı çalışır.
+* **Görsel Çizgi Kontrolleri:** Grafikteki karmaşıklığı azaltmak adına kullanıcılar Gerçek Trafik, Gelecek Projeksiyonu veya Güven Sınır çizgilerini dinamik olarak gizleyip açabilir.
+
+---
+
+<img width="1919" height="1079" alt="06 07 2026" src="https://github.com/user-attachments/assets/9c8f4c58-57a4-4b95-bed0-cf0ecbc0993e" />
+<img width="1919" height="1079" alt="06 07 2026 2" src="https://github.com/user-attachments/assets/00219cfb-6d4d-4aaf-b70b-d38674f19d9e" />
+
+## 📂 Proje Yapısı
+
+```plaintext
+├── ai-service/               # Python FastAPI tabanlı yapay zeka servisi
+│   ├── app/main.py           # Amazon Chronos model tahmini endpoint'leri
+│   ├── Dockerfile
 │   └── requirements.txt      
-├── backend-service/         
-│   ├── src/main/java/...    
-│   └── src/main/resources/ 
-└── frontend-service/       
-    ├── src/App.jsx         
-    └── src/components/    
-
-⚙️ Kurulum ve Çalıştırma
-1. AI Servisinin Başlatılması
-İlk olarak CUDA/CPU destekli Python mikroservisini ayağa kaldırın:
-
-Bash
-cd ai-service
-pip install -r requirements.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-Servis ayağa kalktığında http://127.0.0.1:8000/health ucundan durum kontrolü yapılabilir.
-
-2. Backend Servisinin Başlatılması
-Spring Boot projesini derleyip çalıştırın. Maven wrapper kullanarak hızlıca ayağa kaldırabilirsiniz:
-
-Bash
-cd backend-service
-./mvnw spring-boot:run
-Sistem traffic.csv dosyasını tarayarak Junction 1 verilerini yükleyecek ve saniyede 1 adım akacak şekilde simülasyonu başlatacaktır.
-
-3. Frontend Servisinin Başlatılması
-Kullanıcı arayüzünü ayağa kaldırmak için bağımlılıkları yükleyin ve geliştirme sunucusunu açın:
-
-Bash
-cd frontend-service
-npm install
-npm run dev
-Tarayıcınızda ekranda beliren adresi (genellikle http://localhost:5173) açarak canlı paneli izleyebilirsiniz.
-
-📊 Öne Çıkan Özellikler
-İn-Context Forecasting: Model, geçmişe dönük trafik patternlerini önceden bir eğitim sürecine tabi tutulmaksızın (zero-shot) anlık öğrenir ve geleceğe yönelik projeksiyon çıkarır.
-
-Dinamik Güven Sınırları & Anomali Tespiti: Gelen gerçek değer, modelin belirlediği %95 Üst Sınır değerini aşarsa AŞIRI YOĞUN, %5 Alt Sınır değerinin altına düşerse AŞIRI TENHA anomali etiketini alır ve SOC konsoluna anlık düşer.
-
-Çift Kanallı Canlı İzleme Konsolu: Arayüz üzerinde sadece anomalileri yakalayan sol panel ile sunucudan akan tüm log akışını (Maks 40 satır) gösteren sağ panel eşzamanlı çalışır.
-
-Çizgi Kontrolleri: Grafikteki karmaşıklığı azaltmak adına kullanıcılar Gerçek Trafik, Gelecek Projeksiyonu veya Güven Sınır çizgilerini dinamik olarak gizleyip açabilir.
+├── backend-service/          # Spring Boot reactive simülasyon ve WebSocket servisi
+│   ├── src/main/java/...     # WebFlux, WebSocket ve client konfigürasyonları
+│   ├── src/main/resources/   # traffic.csv veri kaynağı ve ayarlar
+│   └── Dockerfile
+├── frontend-service/         # React, Vite ve Recharts tabanlı canlı izleme paneli
+│   ├── src/App.jsx           
+│   ├── src/components/       # AnomalyTable ve DashboardChart bileşenleri
+│   └── Dockerfile
+└── docker-compose.yml        # Tek komutla tüm mimariyi ayağa kaldıran orkestrasyon dosyası
